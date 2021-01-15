@@ -3,13 +3,13 @@ pragma experimental ABIEncoderV2;
 
 contract GovernorAlpha {
     /// @notice The name of this contract
-    string public constant name = "PoolTogether Governor Alpha";
+    string public constant name = "DefiSaver Governor Alpha";
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint) { return 40_000_000e18; } // 4% of Uni
+    function quorumVotes() public pure returns (uint) { return 40_000_000e18; } // 4% of DefiSaver
 
     /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 10_000_000e18; } // 1% of Uni
+    function proposalThreshold() public pure returns (uint) { return 10_000_000e18; } // 1% of DefiSaver
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
@@ -20,10 +20,10 @@ contract GovernorAlpha {
     /// @notice The duration of voting on a proposal, in blocks
     function votingPeriod() public pure returns (uint) { return 40_320; } // ~7 days in blocks (assuming 15s blocks)
 
-    /// @notice The address of the PoolTogether Protocol Timelock
+    /// @notice The address of the DefiSaver Protocol Timelock
     TimelockInterface public timelock;
 
-    /// @notice The address of the PoolTogether governance token
+    /// @notice The address of the DefiSaver governance token
     GovernanceTokenInterface public defiSaver_;
 
     /// @notice The total number of proposals
@@ -124,9 +124,19 @@ contract GovernorAlpha {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    constructor(address timelock_, address defiSaver__) public {
-        timelock = TimelockInterface(timelock_);
+    /// @notice Hermes' only job is to deliver the timelock
+    address hermes;
+
+    constructor(address hermes_, address defiSaver__) public {
+        hermes = hermes_;
         defiSaver_ = GovernanceTokenInterface(defiSaver__);
+    }
+
+    function setTimelock(address timelock_) public {
+        require(msg.sender == hermes, "only hermes can deliver the timelock");
+        timelock = TimelockInterface(timelock_);
+        // Thanks hermes, your job is done
+        hermes = address(0);
     }
 
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
@@ -234,7 +244,7 @@ contract GovernorAlpha {
             return ProposalState.Succeeded;
         } else if (proposal.executed) {
             return ProposalState.Executed;
-        } else if (block.timestamp >= add256(proposal.eta, timelock.GRACE_PERIOD())) {
+        } else if (block.timestamp >= add256(proposal.eta, timelock.gracePeriod())) {
             return ProposalState.Expired;
         } else {
             return ProposalState.Queued;
@@ -294,7 +304,7 @@ contract GovernorAlpha {
 
 interface TimelockInterface {
     function delay() external view returns (uint);
-    function GRACE_PERIOD() external view returns (uint);
+    function gracePeriod() external view returns (uint);
     function acceptAdmin() external;
     function queuedTransactions(bytes32 hash) external view returns (bool);
     function queueTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external returns (bytes32);
