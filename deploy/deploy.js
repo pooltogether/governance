@@ -26,17 +26,17 @@ module.exports = async (hardhat) => {
 
  dim(`Deployer is ${deployer}`)
  
-
+ // constants
  const retroDistibutionTotalAmount = 1.5e24 // 1.5 million
-
+ const fiveMinsInSeconds = 300
 
 
  const allEmployees = {employeeA, employeeB, employeeC, employeeD, employeeL, employeeLi}
-//  const employeePercentage =
+//  const employeePercentages =
 
 
-  // only mint five minutes after deployment
-  const mintAfter = parseInt(new Date().getTime() / 1000) + 300
+  // only mint five minutes after deployment  
+  const mintAfter = parseInt(new Date().getTime() / 1000) + fiveMinsInSeconds
   
   const defiSaverResult = await deploy('DefiSaver', {
     args: [
@@ -49,11 +49,42 @@ module.exports = async (hardhat) => {
   })
   green(`Deployed DefiSaver token: ${defiSaverResult.address}`)
 
-  // wait until mintAfter has expired
+  
+  // deploy GovernorAlpha
+  const governorResult = await deploy('GovernorAlpha', {
+    contract: 'GovernorZero',
+    args: [
+      deployer,
+      defiSaverResult.address
+    ],
+    from: deployer,
+    // skipIfAlreadyDeployed: true
+  })
+  green(`Deployed GovernorZero: ${governorResult.address}`)
 
+  // deploy Timelock
+  const timelockResult = await deploy('Timelock', {
+    contract: 'Nolock',
+    args: [
+      governorResult.address,
+      1 // 1 second delay
+    ],
+    from: deployer,
+    // skipIfAlreadyDeployed: true
+  })
+  green(`Deployed Timelock: ${timelockResult.address}`)
+
+  
+  dim(`Setting timelock...`)
+  const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, signers[0])
+  await governor.setTimelock(timelockResult.address)
+  
+  
+  // wait until mintAfter has expired
+  await new Promise(r => setTimeout(r, fiveMinsInSeconds));
 
   // deploy investor and employee Treasury contracts
-  allEmployees.forEach((employee)=>{
+  for(const employee of allEmployees){
     dim("deploying Treasury contract for : ", employeeA)
     const vestingAmount = 100 // todo populate from percentage array
     const twoYearsInSecondsUnix = mintAfter + 63072000 
@@ -76,42 +107,8 @@ module.exports = async (hardhat) => {
     const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
     const mintToTreasuryResult = await defiSaver.mint(treasuryResult.address, retroDistibutionTotalAmount)
 
-
-  })
-
-
-
-  const governorResult = await deploy('GovernorAlpha', {
-    contract: 'GovernorZero',
-    args: [
-      deployer,
-      defiSaverResult.address
-    ],
-    from: deployer,
-    // skipIfAlreadyDeployed: true
-  })
-  green(`Deployed GovernorZero: ${governorResult.address}`)
-
-  const timelockResult = await deploy('Timelock', {
-    contract: 'Nolock',
-    args: [
-      governorResult.address,
-      1 // 1 second delay
-    ],
-    from: deployer,
-    // skipIfAlreadyDeployed: true
-  })
-  green(`Deployed Timelock: ${timelockResult.address}`)
-
-  
-  const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, signers[0])
-
-  dim(`Setting timelock...`)
-  await governor.setTimelock(timelockResult.address)
-
-
-
-  // wait for mint period to expire and then mint tokens for MerkleDistributor TODO with setTimeout()
+  }
+    
   // mint tokens for merkleDistributor
   const deployerSigner =  signers[0]
   const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
@@ -122,12 +119,3 @@ module.exports = async (hardhat) => {
 
   green(`Done!`)
 };
-
-
-function checkFlag() {
-  if(flag == false) {
-    setTimeout(checkFlag, 100); /* this checks the flag every 100 milliseconds*/
-  } else {
-
-  }
-}

@@ -53,11 +53,11 @@ module.exports = {
     employeeA:{
       1: "0xB3152182472ba2E46B11C75440a72D087F0750B6",
       4: "0xB3152182472ba2E46B11C75440a72D087F0750B6"
-    },
-    investor1:{
-      1: "0x",
-      4: "0x"
     }
+    // investor1:{
+    //   1: "0x",
+    //   4: "0x"
+    // }
     
   },
   networks
