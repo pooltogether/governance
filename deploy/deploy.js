@@ -91,7 +91,7 @@ module.exports = async (hardhat) => {
 
     const treasuryResult = await deploy('TreasuryVester', {
     args: [
-      desfiSaverResult.address,
+      defiSaverResult.address,
       employee,
       vestingAmount,
       mintAfter,
