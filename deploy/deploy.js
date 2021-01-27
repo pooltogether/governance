@@ -9,7 +9,7 @@ function green() {
 }
 
 module.exports = async (hardhat) => {
-  const { getNamedAccounts, deployments, ethers } = hardhat
+  const { getNamedAccounts, getNamedSigners, deployments, ethers } = hardhat
   const { deploy } = deployments
   const { deployer,
           merkleDistributor,
@@ -22,7 +22,8 @@ module.exports = async (hardhat) => {
  } = await getNamedAccounts()
  
  
- const signers = await ethers.getSigners()
+ const namedSigners = await ethers.getNamedSigners()
+ const deployerSigner = namedSigners.deployer
 
  dim(`Deployer is ${deployer}`)
  
@@ -76,11 +77,11 @@ module.exports = async (hardhat) => {
 
   
   dim(`Setting timelock...`)
-  const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, signers[0])
+  const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, deployerSigner)
   await governor.setTimelock(timelockResult.address)
   
   
-  // wait until mintAfter has expired
+  // wait until mintAfter delay has expired
   await new Promise(r => setTimeout(r, fiveMinsInSeconds));
 
   // deploy investor and employee Treasury contracts
@@ -110,7 +111,6 @@ module.exports = async (hardhat) => {
   }
     
   // mint tokens for merkleDistributor
-  const deployerSigner =  signers[0]
   const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
   const mintTokensToMerkleDistributorResult = await defiSaver.mint(merkleDistributor, retroDistibutionTotalAmount)
   green(`Minted tokens to MerkleDistributor`)
