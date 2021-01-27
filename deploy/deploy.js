@@ -29,15 +29,16 @@ module.exports = async (hardhat) => {
  
  // constants
  const retroDistibutionTotalAmount = 1.5e24 // 1.5 million
- const fiveMinsInSeconds = 300
+ const mintDelayTimeInSeconds = 300
 
 
  const allEmployees = {employeeA, employeeB, employeeC, employeeD, employeeL, employeeLi}
 //  const employeePercentages =
 
 
-  // only mint five minutes after deployment  
-  const mintAfter = parseInt(new Date().getTime() / 1000) + fiveMinsInSeconds
+  // only mint five minutes after deployment
+  const deployStartTimeInSeconds =   parseInt(new Date().getTime() / 1000)
+  const mintAfter = deployStartTimeInSeconds + mintDelayTimeInSeconds
   
   const defiSaverResult = await deploy('DefiSaver', {
     args: [
@@ -82,7 +83,9 @@ module.exports = async (hardhat) => {
   
   
   // wait until mintAfter delay has expired
-  await new Promise(r => setTimeout(r, fiveMinsInSeconds));
+  const timeRemainingToMintDelayExpiry = parseInt(new Date().getTime() / 1000) - deployStartTimeInSeconds
+  dim(`waiting for another ${timeRemainingToMintDelayExpiry} seconds`)
+  await new Promise(r => setTimeout(r, timeRemainingToMintDelayExpiry));
 
   // deploy investor and employee Treasury contracts
   for(const employee of allEmployees){
