@@ -22,19 +22,37 @@ module.exports = async (hardhat) => {
  } = await getNamedAccounts()
  
  
+ 
  const namedSigners = await ethers.getNamedSigners()
  const deployerSigner = namedSigners.deployer
- const allEmployees = {employeeA, employeeB, employeeC, employeeD, employeeL, employeeLi}
- dim(`Deployer is ${deployer}`)
+  const allEmployees = {
+    [employeeA]: 1990,
+    [employeeB]: 200,
+    [employeeC]: 200,
+    [employeeD]:200,
+    [employeeL]:200,
+    [employeeLi]:200
+  }
+ for(const e in allEmployees){
+   console.log(e)
+   console.log(allEmployees[e])
+ }
+   dim(`Deployer is ${deployer}`)
  
  // constants
- const retroDistibutionTotalAmount = 1.5e24 // 1.5 million
- const mintDelayTimeInSeconds = 300
+
+ const totalSupply = 10e24
+ const retroDistibutionTotalAmount = totalSupply * 0.15 // 1.5 million
+ const investorAmount = totalSupply * 0.12 // 1.2 million
+ const twoYearsInSeconds = 63072000
+ const mintDelayTimeInSeconds = twoYearsInSeconds // 2 years
  
-  // only mint five minutes after deployment
+ 
+
+  // mintAfter sets when the governor contract can start minting
   const deployStartTimeInSeconds =   parseInt(new Date().getTime() / 1000)
+  const treasuryVestingPeriodInSeconds = deployStartTimeInSeconds + twoYearsInSeconds
   const mintAfter = deployStartTimeInSeconds + mintDelayTimeInSeconds
-  const twoYearsInSecondsUnix = mintAfter + 63072000 
   
   const defiSaverResult = await deploy('DefiSaver', {
     args: [
@@ -77,44 +95,44 @@ module.exports = async (hardhat) => {
   const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, deployerSigner)
   await governor.setTimelock(timelockResult.address)
   
-  
-  // wait until mintAfter delay has expired
-  const timeRemainingToMintDelayExpiry = parseInt(new Date().getTime() / 1000) - deployStartTimeInSeconds
-  dim(`waiting for another ${timeRemainingToMintDelayExpiry} seconds`)
-  await new Promise(r => setTimeout(r, timeRemainingToMintDelayExpiry));
-
   // deploy investor and employee Treasury contracts
+  const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
+
   for(const employee in allEmployees){
-    dim("deploying Treasury contract for : ", employee)
-    const vestingAmount = 100 // todo populate from percentage array
     
+    const vestingAmount = allEmployees[employee]
+    dim("deploying Treasury contract for : ", employee, "with ", vestingAmount, "tokens")
 
     const treasuryResult = await deploy('TreasuryVester', {
-    args: [
-      defiSaverResult.address,
-      employee,
-      vestingAmount,
-      mintAfter,
-      0,
-      twoYearsInSecondsUnix
-    ],
-    from: deployer,
-    skipIfAlreadyDeployed: true
+      args: [
+        defiSaverResult.address,
+        employee,
+        vestingAmount,
+        mintAfter,
+        0,
+        treasuryVestingPeriodInSeconds
+      ],
+      from: deployer,
+      skipIfAlreadyDeployed: true
     })
     green(`Deployed TreasuryVesting for ${employee} at contract: ${treasuryResult.address}`)
     
-    // now mint to each Treasury contract
-    const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
-    const mintToTreasuryResult = await defiSaver.mint(treasuryResult.address, vestingAmount)
+    // now transfer to each Treasury contract
+    const mintToTreasuryResult = await defiSaver.transferFrom(deployerSigner.address, treasuryResult.address, vestingAmount)
 
   }
     
-  // mint tokens for merkleDistributor
-  const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
-  const mintTokensToMerkleDistributorResult = await defiSaver.mint(merkleDistributor, retroDistibutionTotalAmount)
-  green(`Minted tokens to MerkleDistributor`)
-  
+  // transfer tokens for merkleDistributor
+  const mintTokensToMerkleDistributorResult = await defiSaver.transferFrom(deployerSigner.address, merkleDistributor, retroDistibutionTotalAmount)
+  green(`Minted tokens to MerkleDistributor`, mintTokensToMerkleDistributorResult)
 
+  // send investor tokens to multisig
+  const mintTokensToInvestorMultisigResult = await defiSaver.transferFrom(deployerSigner.address, investorMultisig, investorAmount)
+  green(`Minted tokens to InvestorMultisig `, mintTokensToInvestorMultisigResult)
 
+  //transfer remainder of tokens to Timelock
+  const tokensRemainingResult = await defiSaver.balanceOf(deployerSigner.address)
+  console.log("tokensRemainingResult is ", tokensRemainingResult)
+  // const transferTokensToTimelock = await defiSaver.transferFrom()
   green(`Done!`)
 };
