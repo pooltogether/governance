@@ -24,21 +24,17 @@ module.exports = async (hardhat) => {
  
  const namedSigners = await ethers.getNamedSigners()
  const deployerSigner = namedSigners.deployer
-
+ const allEmployees = {employeeA, employeeB, employeeC, employeeD, employeeL, employeeLi}
  dim(`Deployer is ${deployer}`)
  
  // constants
  const retroDistibutionTotalAmount = 1.5e24 // 1.5 million
  const mintDelayTimeInSeconds = 300
-
-
- const allEmployees = {employeeA, employeeB, employeeC, employeeD, employeeL, employeeLi}
-//  const employeePercentages =
-
-
+ 
   // only mint five minutes after deployment
   const deployStartTimeInSeconds =   parseInt(new Date().getTime() / 1000)
   const mintAfter = deployStartTimeInSeconds + mintDelayTimeInSeconds
+  const twoYearsInSecondsUnix = mintAfter + 63072000 
   
   const defiSaverResult = await deploy('DefiSaver', {
     args: [
@@ -88,10 +84,10 @@ module.exports = async (hardhat) => {
   await new Promise(r => setTimeout(r, timeRemainingToMintDelayExpiry));
 
   // deploy investor and employee Treasury contracts
-  for(const employee of allEmployees){
-    dim("deploying Treasury contract for : ", employeeA)
+  for(const employee in allEmployees){
+    dim("deploying Treasury contract for : ", employee)
     const vestingAmount = 100 // todo populate from percentage array
-    const twoYearsInSecondsUnix = mintAfter + 63072000 
+    
 
     const treasuryResult = await deploy('TreasuryVester', {
     args: [
@@ -109,7 +105,7 @@ module.exports = async (hardhat) => {
     
     // now mint to each Treasury contract
     const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
-    const mintToTreasuryResult = await defiSaver.mint(treasuryResult.address, retroDistibutionTotalAmount)
+    const mintToTreasuryResult = await defiSaver.mint(treasuryResult.address, vestingAmount)
 
   }
     
