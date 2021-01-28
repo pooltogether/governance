@@ -18,7 +18,8 @@ module.exports = async (hardhat) => {
           employeeC,
           employeeD,
           employeeL,
-          employeeLi
+          employeeLi,
+          investorMultisig
  } = await getNamedAccounts()
  
  
@@ -26,7 +27,7 @@ module.exports = async (hardhat) => {
  const namedSigners = await ethers.getNamedSigners()
  const deployerSigner = namedSigners.deployer
   const allEmployees = {
-    [employeeA]: 1990,
+    [employeeA]: "1990",
     [employeeB]: 200,
     [employeeC]: 200,
     [employeeD]:200,
@@ -41,9 +42,12 @@ module.exports = async (hardhat) => {
  
  // constants
 
- const totalSupply = 10e24
- const retroDistibutionTotalAmount = totalSupply * 0.15 // 1.5 million
- const investorAmount = totalSupply * 0.12 // 1.2 million
+ const totalSupply = "10000000" // 10 million
+ const retroDistibutionAmount = "1500000"
+ const totalSupplyGWei = ethers.utils.parseEther(totalSupply)
+ const retroDistibutionTotalAmount = totalSupplyGWei * 0.15 // 1.5 million
+ 
+ const investorAmount = "1200000" // 1.2 million
  const twoYearsInSeconds = 63072000
  const mintDelayTimeInSeconds = twoYearsInSeconds // 2 years
  
@@ -54,31 +58,33 @@ module.exports = async (hardhat) => {
   const treasuryVestingPeriodInSeconds = deployStartTimeInSeconds + twoYearsInSeconds
   const mintAfter = deployStartTimeInSeconds + mintDelayTimeInSeconds
   
-  const defiSaverResult = await deploy('DefiSaver', {
+  const poolTokenResult = await deploy('Pool', {
     args: [
       deployer,
       deployer,
       mintAfter
     ],
     from: deployer,
-    // skipIfAlreadyDeployed: true
+    //skipIfAlreadyDeployed: true
   })
-  green(`Deployed DefiSaver token: ${defiSaverResult.address}`)
+  green(`Deployed PoolToken token: ${poolTokenResult.address}`)
 
   
   // deploy GovernorAlpha
+  dim(`deploying GovernorAlpha`)
   const governorResult = await deploy('GovernorAlpha', {
     contract: 'GovernorZero',
     args: [
       deployer,
-      defiSaverResult.address
+      poolTokenResult.address
     ],
     from: deployer,
-    // skipIfAlreadyDeployed: true
+    //skipIfAlreadyDeployed: true
   })
   green(`Deployed GovernorZero: ${governorResult.address}`)
 
   // deploy Timelock
+  dim(`deploying Timelock`)
   const timelockResult = await deploy('Timelock', {
     contract: 'Nolock',
     args: [
@@ -86,7 +92,7 @@ module.exports = async (hardhat) => {
       1 // 1 second delay
     ],
     from: deployer,
-    // skipIfAlreadyDeployed: true
+    //skipIfAlreadyDeployed: false
   })
   green(`Deployed Timelock: ${timelockResult.address}`)
 
@@ -96,7 +102,7 @@ module.exports = async (hardhat) => {
   await governor.setTimelock(timelockResult.address)
   
   // deploy investor and employee Treasury contracts
-  const defiSaver = await ethers.getContractAt('DefiSaver', defiSaverResult.address, deployerSigner)
+  const poolToken = await ethers.getContractAt('Pool', poolTokenResult.address, deployerSigner)
 
   for(const employee in allEmployees){
     
@@ -105,34 +111,42 @@ module.exports = async (hardhat) => {
 
     const treasuryResult = await deploy('TreasuryVester', {
       args: [
-        defiSaverResult.address,
+        poolTokenResult.address,
         employee,
         vestingAmount,
         mintAfter,
-        0,
-        treasuryVestingPeriodInSeconds
+        treasuryVestingPeriodInSeconds,
+        treasuryVestingPeriodInSeconds + 1
       ],
       from: deployer,
-      skipIfAlreadyDeployed: true
+      skipIfAlreadyDeployed: false
     })
     green(`Deployed TreasuryVesting for ${employee} at contract: ${treasuryResult.address}`)
     
     // now transfer to each Treasury contract
-    const mintToTreasuryResult = await defiSaver.transferFrom(deployerSigner.address, treasuryResult.address, vestingAmount)
-
+    dim(`Transfering allocated tokens to contract`)
+    const mintToTreasuryResult = await poolToken.transferFrom(deployerSigner.address, treasuryResult.address, vestingAmount)
+    green(`Transferred ${vestingAmount} to ${treasuryResult.address}`)
   }
     
-  // transfer tokens for merkleDistributor
-  const mintTokensToMerkleDistributorResult = await defiSaver.transferFrom(deployerSigner.address, merkleDistributor, retroDistibutionTotalAmount)
-  green(`Minted tokens to MerkleDistributor`, mintTokensToMerkleDistributorResult)
+
 
   // send investor tokens to multisig
-  const mintTokensToInvestorMultisigResult = await defiSaver.transferFrom(deployerSigner.address, investorMultisig, investorAmount)
-  green(`Minted tokens to InvestorMultisig `, mintTokensToInvestorMultisigResult)
+  dim(`Transferring tokens to investor multisig`)
+  await poolToken.transferFrom(deployerSigner.address, investorMultisig, investorAmount)
+  green(`Transferred ${investorAmount} tokens to InvestorMultisig `)
 
+  // transfer tokens for merkleDistributor
+  dim(`Transferring tokens to MerkleDistributor`)
+  await poolToken.transferFrom(deployerSigner.address, merkleDistributor, retroDistibutionAmount)
+  green(`Transferred ${retroDistibutionAmount} tokens to MerkleDistributor`)
+  
   //transfer remainder of tokens to Timelock
-  const tokensRemainingResult = await defiSaver.balanceOf(deployerSigner.address)
-  console.log("tokensRemainingResult is ", tokensRemainingResult)
-  // const transferTokensToTimelock = await defiSaver.transferFrom()
+  const tokensRemainingResult = await poolToken.balanceOf(deployerSigner.address)
+  console.log("tokensRemainingResult is ", tokensRemainingResult) // in BN format
+  const tokensRemaining = totalSupplyGWei - tokensRemainingResult
+  await poolToken.transferFrom(deployerSigner.address, merkleDistributor, tokensRemaining)
+  green(`Transferred ${tokensRemaining} to Timelock`)
+
   green(`Done!`)
 };
