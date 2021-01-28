@@ -5,7 +5,7 @@ import "./SafeMath.sol";
 
 contract Pool {
     /// @notice EIP-20 token name for this token
-    string public constant name = "Pool";
+    string public constant name = "PoolTogether";
 
     /// @notice EIP-20 token symbol for this token
     string public constant symbol = "POOL";

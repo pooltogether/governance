@@ -10,23 +10,13 @@ function green() {
 }
 
 module.exports = async (hardhat) => {
-  const { getNamedAccounts, getNamedSigners, deployments, ethers } = hardhat
+  const { getNamedAccounts, deployments, ethers } = hardhat
   const { deploy } = deployments
   const namedAccounts = await getNamedAccounts()
-  const { deployer,
-          employeeA,
-          employeeB,
-          employeeC,
-          employeeD,
-          employeeL,
-          employeeLi,
-          employeeJ
- } = await getNamedAccounts()
- 
- 
- 
+  const { deployer, MultiSig } = await getNamedAccounts()
   const namedSigners = await ethers.getNamedSigners()
   const deployerSigner = namedSigners.deployer
+  
   const allEmployees = {
     EmployeeA: "10000",
     EmployeeB: "400000",
@@ -37,20 +27,18 @@ module.exports = async (hardhat) => {
     EmployeeJ: "4200"
   }
 
-
   dim(`Deployer is ${deployer}`)
  
- // constants 
- const twoYearsInSeconds = 63072000
- 
- 
-  // mintAfter sets when the governor contract can start minting
+  // constants 
+  const twoYearsInSeconds = 63072000
   const vestingStartTimeInSeconds = parseInt(new Date().getTime() / 1000)
   const twoYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + twoYearsInSeconds
   
+  // deploy Pool token
+  dim(`deploying POOL token`)
   const poolTokenResult = await deploy('Pool', {
     args: [
-      deployer,
+      MultiSig, //TODO: change to gnosis safe multisig
       deployer, // minter
       twoYearsAfterDeployStartInSeconds
     ],
@@ -94,25 +82,26 @@ module.exports = async (hardhat) => {
     green(`Timelock set to ${timelockResult.address}`)
   }
 
-  // deploy investor and employee Treasury contracts
+  
   const poolToken = await ethers.getContractAt('Pool', poolTokenResult.address, deployerSigner)
 
-  // set POOL minter
+  // set POOL minter to timelock
   if(await poolToken.minter() != timelockResult.address){
     dim(`Setting timelock as POOL minter`)
     await poolToken.setMinter(timelockResult.address)
     green(`set POOL minter as ${timelockResult.address}`)
   }
-
+  
+  // deploy employee Treasury contracts
   for(const employee in allEmployees) {
     const employeeAddress = namedAccounts[employee]
     const vestingAmount = allEmployees[employee]
-    dim("deploying Treasury contract for : ", employee, "with ", vestingAmount, "tokens")
+    dim("deploying Treasury contract for : ", employee, "at address", employeeAddress, "with ", vestingAmount, "tokens")
     const recentBlock = await ethers.provider.getBlock()
     dim(`got recent block timestamp: ${recentBlock.timestamp}`)
     const vestingStartTimeInSeconds = recentBlock.timestamp + 600 
 
-    const treasuryResult = await deploy(`TreasuryVesterFor${namedAccounts[employee]}`, {
+    const treasuryResult = await deploy(`TreasuryVesterFor${employee}`, {
       contract: 'TreasuryVester',
       args: [
         poolTokenResult.address,
