@@ -1,4 +1,5 @@
-const chalk = require('chalk')
+const chalk = require('chalk');
+const { getChainId } = require('hardhat');
 
 function dim() {
   console.log(chalk.dim.call(chalk, ...arguments))
@@ -11,51 +12,117 @@ function green() {
 module.exports = async (hardhat) => {
   const { getNamedAccounts, deployments, ethers } = hardhat
   const { deploy } = deployments
-  const { deployer } = await getNamedAccounts()
+  const namedAccounts = await getNamedAccounts()
+  const { deployer, MultiSig } = await getNamedAccounts()
+  const namedSigners = await ethers.getNamedSigners()
+  const deployerSigner = namedSigners.deployer
+
+  const allReceivingEntities = {
+    EmployeeA: "10000",
+    EmployeeB: "400000",
+    EmployeeC: "400000",
+    EmployeeD: "10000",
+    EmployeeL: "400000",
+    EmployeeLi:"10000",
+    EmployeeJ: "4200",
+    Treasury: "6000000"
+  }
 
   dim(`Deployer is ${deployer}`)
-
-  // only mint five minutes after deployment
-  const mintAfter = parseInt(new Date().getTime() / 1000) + 300
+ 
+  // constants 
+  const twoYearsInSeconds = 63072000
+  const vestingStartTimeInSeconds = parseInt(new Date().getTime() / 1000)
+  const twoYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + twoYearsInSeconds
   
-  const defiSaverResult = await deploy('DefiSaver', {
+  // deploy Pool token
+  dim(`deploying POOL token`)
+  const poolTokenResult = await deploy('Pool', {
     args: [
-      deployer,
-      deployer,
-      mintAfter
+      MultiSig, 
+      deployer, // minter
+      twoYearsAfterDeployStartInSeconds
     ],
     from: deployer,
-    // skipIfAlreadyDeployed: true
+    skipIfAlreadyDeployed: true
   })
-  green(`Deployed DefiSaver token: ${defiSaverResult.address}`)
+  green(`Deployed PoolToken token: ${poolTokenResult.address}`)
 
+  
+  // deploy GovernorAlpha
+  dim(`deploying GovernorAlpha`)
   const governorResult = await deploy('GovernorAlpha', {
     contract: 'GovernorZero',
     args: [
       deployer,
-      defiSaverResult.address
+      poolTokenResult.address
     ],
     from: deployer,
-    // skipIfAlreadyDeployed: true
+    skipIfAlreadyDeployed: true
   })
   green(`Deployed GovernorZero: ${governorResult.address}`)
 
+  // deploy Timelock
+  dim(`deploying Timelock`)
   const timelockResult = await deploy('Timelock', {
-    contract: 'Nolock',
+    contract: await getChainId() === 1 ? "Timelock" : "Nolock",
     args: [
       governorResult.address,
-      1 // 1 second delay
+      await getChainId() === 1 ? 172800 : 1 // 2 days for mainnet
     ],
     from: deployer,
-    // skipIfAlreadyDeployed: true
+    skipIfAlreadyDeployed: true
   })
   green(`Deployed Timelock: ${timelockResult.address}`)
 
-  const signers = await ethers.getSigners()
-  const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, signers[0])
-
+  
   dim(`Setting timelock...`)
-  await governor.setTimelock(timelockResult.address)
+  const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, deployerSigner)
+  if(await governor.timelock() != timelockResult.address){
+    await governor.setTimelock(timelockResult.address)
+    green(`Timelock set to ${timelockResult.address}`)
+  }
 
+  
+  const poolToken = await ethers.getContractAt('Pool', poolTokenResult.address, deployerSigner)
+
+  // set POOL minter to timelock
+  if(await poolToken.minter() != timelockResult.address){
+    dim(`Setting timelock as POOL minter`)
+    await poolToken.setMinter(timelockResult.address)
+    green(`set POOL minter as ${timelockResult.address}`)
+  }
+  
+  // deploy employee Treasury contracts
+  for(const entity in allReceivingEntities) {
+    let entityAddress = namedAccounts[entity]
+    if(entity === 'Treasury'){
+      entityAddress = timelockResult.address
+      console.log("setting entity address to ", entityAddress)
+    }
+    const vestingAmount = allReceivingEntities[entity]
+    dim("deploying TreasuryVesting contract for : ", entity, "at address", entityAddress, "with ", vestingAmount, "tokens")
+    const recentBlock = await ethers.provider.getBlock()
+    dim(`got recent block timestamp: ${recentBlock.timestamp}`)
+    const vestingStartTimeInSeconds = recentBlock.timestamp + 600 
+
+    const treasuryResult = await deploy(`TreasuryVesterFor${entity}`, {
+      contract: 'TreasuryVester',
+      args: [
+        poolTokenResult.address,
+        entityAddress,
+        vestingAmount,
+        vestingStartTimeInSeconds,
+        vestingStartTimeInSeconds,
+        twoYearsAfterDeployStartInSeconds
+      ],
+      from: deployer,
+      skipIfAlreadyDeployed: true
+    })
+    green(`Deployed TreasuryVesting for ${entity} at contract: ${treasuryResult.address}`)
+  }
+
+
+    
   green(`Done!`)
 };

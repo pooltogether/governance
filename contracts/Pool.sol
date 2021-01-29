@@ -3,18 +3,18 @@ pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
 
-contract DefiSaver {
+contract Pool {
     /// @notice EIP-20 token name for this token
-    string public constant name = "DefiSaver";
+    string public constant name = "PoolTogether";
 
     /// @notice EIP-20 token symbol for this token
-    string public constant symbol = "DFI";
+    string public constant symbol = "POOL";
 
     /// @notice EIP-20 token decimals for this token
     uint8 public constant decimals = 18;
 
     /// @notice Total number of tokens in circulation
-    uint public totalSupply = 10_000_000e18; // 10 million DefiSaver
+    uint public totalSupply = 10_000_000e18; // 10 million Pool
 
     /// @notice Address which may mint new tokens
     address public minter;
@@ -77,13 +77,13 @@ contract DefiSaver {
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
     /**
-     * @notice Construct a new DefiSaver token
+     * @notice Construct a new Pool token
      * @param account The initial account to grant all the tokens
      * @param minter_ The account with minting ability
      * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
     constructor(address account, address minter_, uint mintingAllowedAfter_) public {
-        require(mintingAllowedAfter_ >= block.timestamp, "DefiSaver::constructor: minting can only begin after deployment");
+        require(mintingAllowedAfter_ >= block.timestamp, "Pool::constructor: minting can only begin after deployment");
 
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
@@ -97,7 +97,7 @@ contract DefiSaver {
      * @param minter_ The address of the new minter
      */
     function setMinter(address minter_) external {
-        require(msg.sender == minter, "DefiSaver::setMinter: only the minter can change the minter address");
+        require(msg.sender == minter, "Pool::setMinter: only the minter can change the minter address");
         emit MinterChanged(minter, minter_);
         minter = minter_;
     }
@@ -108,20 +108,20 @@ contract DefiSaver {
      * @param rawAmount The number of tokens to be minted
      */
     function mint(address dst, uint rawAmount) external {
-        require(msg.sender == minter, "DefiSaver::mint: only the minter can mint");
-        require(block.timestamp >= mintingAllowedAfter, "DefiSaver::mint: minting not allowed yet");
-        require(dst != address(0), "DefiSaver::mint: cannot transfer to the zero address");
+        require(msg.sender == minter, "Pool::mint: only the minter can mint");
+        require(block.timestamp >= mintingAllowedAfter, "Pool::mint: minting not allowed yet");
+        require(dst != address(0), "Pool::mint: cannot transfer to the zero address");
 
         // record the mint
         mintingAllowedAfter = SafeMath.add(block.timestamp, minimumTimeBetweenMints);
 
         // mint the amount
-        uint96 amount = safe96(rawAmount, "DefiSaver::mint: amount exceeds 96 bits");
-        require(amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100), "DefiSaver::mint: exceeded mint cap");
-        totalSupply = safe96(SafeMath.add(totalSupply, amount), "DefiSaver::mint: totalSupply exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, "Pool::mint: amount exceeds 96 bits");
+        require(amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100), "Pool::mint: exceeded mint cap");
+        totalSupply = safe96(SafeMath.add(totalSupply, amount), "Pool::mint: totalSupply exceeds 96 bits");
 
         // transfer the amount to the recipient
-        balances[dst] = add96(balances[dst], amount, "DefiSaver::mint: transfer amount overflows");
+        balances[dst] = add96(balances[dst], amount, "Pool::mint: transfer amount overflows");
         emit Transfer(address(0), dst, amount);
 
         // move delegates
@@ -151,7 +151,7 @@ contract DefiSaver {
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
         } else {
-            amount = safe96(rawAmount, "DefiSaver::approve: amount exceeds 96 bits");
+            amount = safe96(rawAmount, "Pool::approve: amount exceeds 96 bits");
         }
 
         allowances[msg.sender][spender] = amount;
@@ -175,16 +175,16 @@ contract DefiSaver {
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
         } else {
-            amount = safe96(rawAmount, "DefiSaver::permit: amount exceeds 96 bits");
+            amount = safe96(rawAmount, "Pool::permit: amount exceeds 96 bits");
         }
 
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, rawAmount, nonces[owner]++, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "DefiSaver::permit: invalid signature");
-        require(signatory == owner, "DefiSaver::permit: unauthorized");
-        require(now <= deadline, "DefiSaver::permit: signature expired");
+        require(signatory != address(0), "Pool::permit: invalid signature");
+        require(signatory == owner, "Pool::permit: unauthorized");
+        require(now <= deadline, "Pool::permit: signature expired");
 
         allowances[owner][spender] = amount;
 
@@ -207,7 +207,7 @@ contract DefiSaver {
      * @return Whether or not the transfer succeeded
      */
     function transfer(address dst, uint rawAmount) external returns (bool) {
-        uint96 amount = safe96(rawAmount, "DefiSaver::transfer: amount exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, "Pool::transfer: amount exceeds 96 bits");
         _transferTokens(msg.sender, dst, amount);
         return true;
     }
@@ -222,10 +222,10 @@ contract DefiSaver {
     function transferFrom(address src, address dst, uint rawAmount) external returns (bool) {
         address spender = msg.sender;
         uint96 spenderAllowance = allowances[src][spender];
-        uint96 amount = safe96(rawAmount, "DefiSaver::approve: amount exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, "Pool::approve: amount exceeds 96 bits");
 
         if (spender != src && spenderAllowance != uint96(-1)) {
-            uint96 newAllowance = sub96(spenderAllowance, amount, "DefiSaver::transferFrom: transfer amount exceeds spender allowance");
+            uint96 newAllowance = sub96(spenderAllowance, amount, "Pool::transferFrom: transfer amount exceeds spender allowance");
             allowances[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);
@@ -257,9 +257,9 @@ contract DefiSaver {
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "DefiSaver::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "DefiSaver::delegateBySig: invalid nonce");
-        require(now <= expiry, "DefiSaver::delegateBySig: signature expired");
+        require(signatory != address(0), "Pool::delegateBySig: invalid signature");
+        require(nonce == nonces[signatory]++, "Pool::delegateBySig: invalid nonce");
+        require(now <= expiry, "Pool::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -281,7 +281,7 @@ contract DefiSaver {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint blockNumber) public view returns (uint96) {
-        require(blockNumber < block.number, "DefiSaver::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "Pool::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -325,11 +325,11 @@ contract DefiSaver {
     }
 
     function _transferTokens(address src, address dst, uint96 amount) internal {
-        require(src != address(0), "DefiSaver::_transferTokens: cannot transfer from the zero address");
-        require(dst != address(0), "DefiSaver::_transferTokens: cannot transfer to the zero address");
+        require(src != address(0), "Pool::_transferTokens: cannot transfer from the zero address");
+        require(dst != address(0), "Pool::_transferTokens: cannot transfer to the zero address");
 
-        balances[src] = sub96(balances[src], amount, "DefiSaver::_transferTokens: transfer amount exceeds balance");
-        balances[dst] = add96(balances[dst], amount, "DefiSaver::_transferTokens: transfer amount overflows");
+        balances[src] = sub96(balances[src], amount, "Pool::_transferTokens: transfer amount exceeds balance");
+        balances[dst] = add96(balances[dst], amount, "Pool::_transferTokens: transfer amount overflows");
         emit Transfer(src, dst, amount);
 
         _moveDelegates(delegates[src], delegates[dst], amount);
@@ -340,21 +340,21 @@ contract DefiSaver {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
                 uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint96 srcRepNew = sub96(srcRepOld, amount, "DefiSaver::_moveVotes: vote amount underflows");
+                uint96 srcRepNew = sub96(srcRepOld, amount, "Pool::_moveVotes: vote amount underflows");
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
                 uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint96 dstRepNew = add96(dstRepOld, amount, "DefiSaver::_moveVotes: vote amount overflows");
+                uint96 dstRepNew = add96(dstRepOld, amount, "Pool::_moveVotes: vote amount overflows");
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
     }
 
     function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint96 oldVotes, uint96 newVotes) internal {
-      uint32 blockNumber = safe32(block.number, "DefiSaver::_writeCheckpoint: block number exceeds 32 bits");
+      uint32 blockNumber = safe32(block.number, "Pool::_writeCheckpoint: block number exceeds 32 bits");
 
       if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
           checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;

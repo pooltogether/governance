@@ -5,7 +5,7 @@ import "./SafeMath.sol";
 contract TreasuryVester {
     using SafeMath for uint;
 
-    address public defiSaver;
+    address public pool;
     address public recipient;
 
     uint public vestingAmount;
@@ -16,7 +16,7 @@ contract TreasuryVester {
     uint public lastUpdate;
 
     constructor(
-        address defiSaver_,
+        address pool_,
         address recipient_,
         uint vestingAmount_,
         uint vestingBegin_,
@@ -27,7 +27,7 @@ contract TreasuryVester {
         require(vestingCliff_ >= vestingBegin_, 'TreasuryVester::constructor: cliff is too early');
         require(vestingEnd_ > vestingCliff_, 'TreasuryVester::constructor: end is too early');
 
-        defiSaver = defiSaver_;
+        pool = pool_;
         recipient = recipient_;
 
         vestingAmount = vestingAmount_;
@@ -47,12 +47,12 @@ contract TreasuryVester {
         require(block.timestamp >= vestingCliff, 'TreasuryVester::claim: not time yet');
         uint amount;
         if (block.timestamp >= vestingEnd) {
-            amount = IERC20(defiSaver).balanceOf(address(this));
+            amount = IERC20(pool).balanceOf(address(this));
         } else {
             amount = vestingAmount.mul(block.timestamp - lastUpdate).div(vestingEnd - vestingBegin);
             lastUpdate = block.timestamp;
         }
-        IERC20(defiSaver).transfer(recipient, amount);
+        IERC20(pool).transfer(recipient, amount);
     }
 }
 

@@ -18,7 +18,7 @@ describe('Integration test', async () => {
 
     governor = await getContract('GovernorAlpha')
     timelock = await getContract('Timelock')
-    pool = await getContract('DefiSaver')
+    pool = await getContract('Pool')
 
     await pool.delegate(signers[0].address)
   })
