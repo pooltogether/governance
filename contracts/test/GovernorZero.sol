@@ -6,7 +6,7 @@ import "../GovernorAlpha.sol";
 contract GovernorZero is GovernorAlpha {
 
   /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-  function quorumVotes() public pure returns (uint) { return 1e18; } // 4% of DefiSaver
+  function quorumVotes() public pure returns (uint) { return 1e18; } // 1% of Pool
 
   /// @notice The number of votes required in order for a voter to become a proposer
   function proposalThreshold() public pure returns (uint) { return 1e18; }
@@ -20,6 +20,6 @@ contract GovernorZero is GovernorAlpha {
   /// @notice The duration of voting on a proposal, in blocks
   function votingPeriod() public pure returns (uint) { return 100; } // ~7 days in blocks (assuming 15s blocks)
 
-  constructor(address hermes_, address defiSaver__) public GovernorAlpha(hermes_, defiSaver__) {
+  constructor(address hermes_, address pool_) public GovernorAlpha(hermes_, pool_) {
   }
 }

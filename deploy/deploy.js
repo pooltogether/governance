@@ -16,15 +16,16 @@ module.exports = async (hardhat) => {
   const { deployer, MultiSig } = await getNamedAccounts()
   const namedSigners = await ethers.getNamedSigners()
   const deployerSigner = namedSigners.deployer
-  
-  const allEmployees = {
+
+  const allReceivingEntities = {
     EmployeeA: "10000",
     EmployeeB: "400000",
     EmployeeC: "400000",
     EmployeeD: "10000",
     EmployeeL: "400000",
     EmployeeLi:"10000",
-    EmployeeJ: "4200"
+    EmployeeJ: "4200",
+    Treasury: "6000000"
   }
 
   dim(`Deployer is ${deployer}`)
@@ -38,7 +39,7 @@ module.exports = async (hardhat) => {
   dim(`deploying POOL token`)
   const poolTokenResult = await deploy('Pool', {
     args: [
-      MultiSig, //TODO: change to gnosis safe multisig
+      MultiSig, 
       deployer, // minter
       twoYearsAfterDeployStartInSeconds
     ],
@@ -93,19 +94,23 @@ module.exports = async (hardhat) => {
   }
   
   // deploy employee Treasury contracts
-  for(const employee in allEmployees) {
-    const employeeAddress = namedAccounts[employee]
-    const vestingAmount = allEmployees[employee]
-    dim("deploying Treasury contract for : ", employee, "at address", employeeAddress, "with ", vestingAmount, "tokens")
+  for(const entity in allReceivingEntities) {
+    let entityAddress = namedAccounts[entity]
+    if(entity === 'Treasury'){
+      entityAddress = timelockResult.address
+      console.log("setting entity address to ", entityAddress)
+    }
+    const vestingAmount = allReceivingEntities[entity]
+    dim("deploying TreasuryVesting contract for : ", entity, "at address", entityAddress, "with ", vestingAmount, "tokens")
     const recentBlock = await ethers.provider.getBlock()
     dim(`got recent block timestamp: ${recentBlock.timestamp}`)
     const vestingStartTimeInSeconds = recentBlock.timestamp + 600 
 
-    const treasuryResult = await deploy(`TreasuryVesterFor${employee}`, {
+    const treasuryResult = await deploy(`TreasuryVesterFor${entity}`, {
       contract: 'TreasuryVester',
       args: [
         poolTokenResult.address,
-        employeeAddress,
+        entityAddress,
         vestingAmount,
         vestingStartTimeInSeconds,
         vestingStartTimeInSeconds,
@@ -114,8 +119,10 @@ module.exports = async (hardhat) => {
       from: deployer,
       skipIfAlreadyDeployed: true
     })
-    green(`Deployed TreasuryVesting for ${employee} at contract: ${treasuryResult.address}`)
+    green(`Deployed TreasuryVesting for ${entity} at contract: ${treasuryResult.address}`)
   }
+
+
     
   green(`Done!`)
 };
