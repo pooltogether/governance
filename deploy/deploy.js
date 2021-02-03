@@ -64,8 +64,9 @@ module.exports = async (hardhat) => {
 
   // deploy Timelock
   dim(`deploying Timelock`)
+  const contract = await getChainId() === 1 ? "Timelock" : "Nolock"
   const timelockResult = await deploy('Timelock', {
-    contract: await getChainId() === 1 ? "Timelock" : "Nolock",
+    contract,
     args: [
       governorResult.address,
       await getChainId() === 1 ? 172800 : 1 // 2 days for mainnet
@@ -73,7 +74,7 @@ module.exports = async (hardhat) => {
     from: deployer,
     skipIfAlreadyDeployed: true
   })
-  green(`Deployed Timelock: ${timelockResult.address}`)
+  green(`Deployed Timelock as ${contract}: ${timelockResult.address}`)
 
   
   dim(`Setting timelock...`)
