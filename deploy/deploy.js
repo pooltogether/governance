@@ -100,7 +100,7 @@ module.exports = async (hardhat) => {
       entityAddress = timelockResult.address
       console.log("setting entity address to ", entityAddress)
     }
-    const vestingAmount = allReceivingEntities[entity]
+    const vestingAmount = ethers.utils.parseEther(allReceivingEntities[entity])
     dim("deploying TreasuryVesting contract for : ", entity, "at address", entityAddress, "with ", vestingAmount, "tokens")
     const recentBlock = await ethers.provider.getBlock()
     dim(`got recent block timestamp: ${recentBlock.timestamp}`)
