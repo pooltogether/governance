@@ -53,8 +53,9 @@ module.exports = async (hardhat) => {
   
   // deploy GovernorAlpha
   dim(`deploying GovernorAlpha`)
+  const governanceContract = isTestNet? 'GovernorZero' : "GovernorAlpha"
   const governorResult = await deploy('GovernorAlpha', {
-    contract: isTestNet? 'GovernorZero' : "GovernorAlpha",
+    contract: governanceContract,
     args: [
       deployer,
       poolTokenResult.address
@@ -62,13 +63,13 @@ module.exports = async (hardhat) => {
     from: deployer,
     skipIfAlreadyDeployed: true
   })
-  green(`Deployed ${isTestNet? 'GovernorZero' : 'GovernorAlpha'} : ${governorResult.address}`)
+  green(`Deployed ${governanceContract} : ${governorResult.address}`)
 
   // deploy Timelock
   dim(`deploying Timelock`)
-  const contract = isTestNet == 1 ? "Timelock" : "Nolock"
+  const timelockContract = isTestNet? "Timelock" : "Nolock"
   const timelockResult = await deploy('Timelock', {
-    contract,
+    timelockContract,
     args: [
       governorResult.address,
       isTestNet ? 172800 : 1 // 2 days for mainnet
@@ -76,7 +77,7 @@ module.exports = async (hardhat) => {
     from: deployer,
     skipIfAlreadyDeployed: true
   })
-  green(`Deployed Timelock as ${contract}: ${timelockResult.address}`)
+  green(`Deployed Timelock as ${timelockContract}: ${timelockResult.address}`)
 
   
   dim(`Setting timelock...`)
