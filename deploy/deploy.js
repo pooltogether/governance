@@ -36,7 +36,7 @@ module.exports = async (hardhat) => {
   const twoYearsInSeconds = 63072000
   const vestingStartTimeInSeconds = parseInt(new Date().getTime() / 1000)
   const twoYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + twoYearsInSeconds
-  const twoDaysInSeconds = 172800
+  const twoDaysInSeconds = 172810
   
   // deploy Pool token
   dim(`deploying POOL token`)
@@ -67,13 +67,14 @@ module.exports = async (hardhat) => {
   green(`Deployed ${governanceContract} : ${governorResult.address}`)
 
   // deploy Timelock
-  dim(`deploying Timelock`)
+  
   const timelockContract = isTestNet? "Nolock" : "Timelock"
+  dim(`deploying ${timelockContract}`)
   const timelockResult = await deploy('Timelock', {
-    timelockContract,
+    contract: timelockContract,
     args: [
       governorResult.address,
-      isTestNet ? twoDaysInSeconds : 1 // 2 days for mainnet
+      isTestNet ? 1 : twoDaysInSeconds // 2 days for mainnet
     ],
     from: deployer,
     skipIfAlreadyDeployed: true
