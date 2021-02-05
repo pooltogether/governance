@@ -29,11 +29,14 @@ module.exports = async (hardhat) => {
   }
 
   dim(`Deployer is ${deployer}`)
- 
+  const isTestNet = await getChainId() == 1 ? false : true
+  dim(`Is TestNet? ${isTestNet}`)
+
   // constants 
   const twoYearsInSeconds = 63072000
   const vestingStartTimeInSeconds = parseInt(new Date().getTime() / 1000)
   const twoYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + twoYearsInSeconds
+  const twoDaysInSeconds = 172800
   
   // deploy Pool token
   dim(`deploying POOL token`)
@@ -51,8 +54,9 @@ module.exports = async (hardhat) => {
   
   // deploy GovernorAlpha
   dim(`deploying GovernorAlpha`)
+  const governanceContract = isTestNet? 'GovernorZero' : "GovernorAlpha"
   const governorResult = await deploy('GovernorAlpha', {
-    contract: 'GovernorZero',
+    contract: governanceContract,
     args: [
       deployer,
       poolTokenResult.address
@@ -60,21 +64,21 @@ module.exports = async (hardhat) => {
     from: deployer,
     skipIfAlreadyDeployed: true
   })
-  green(`Deployed GovernorZero: ${governorResult.address}`)
+  green(`Deployed ${governanceContract} : ${governorResult.address}`)
 
   // deploy Timelock
   dim(`deploying Timelock`)
-  const contract = await getChainId() === 1 ? "Timelock" : "Nolock"
+  const timelockContract = isTestNet? "Nolock" : "Timelock"
   const timelockResult = await deploy('Timelock', {
-    contract,
+    timelockContract,
     args: [
       governorResult.address,
-      await getChainId() === 1 ? 172800 : 1 // 2 days for mainnet
+      isTestNet ? twoDaysInSeconds : 1 // 2 days for mainnet
     ],
     from: deployer,
     skipIfAlreadyDeployed: true
   })
-  green(`Deployed Timelock as ${contract}: ${timelockResult.address}`)
+  green(`Deployed Timelock as ${timelockContract}: ${timelockResult.address}`)
 
   
   dim(`Setting timelock...`)
@@ -97,7 +101,7 @@ module.exports = async (hardhat) => {
   // deploy employee Treasury contracts
   for(const entity in allReceivingEntities) {
     let entityAddress = namedAccounts[entity]
-    if(entity === 'Treasury'){
+    if(entity == 'Treasury'){
       entityAddress = timelockResult.address
       console.log("setting entity address to ", entityAddress)
     }
@@ -105,7 +109,8 @@ module.exports = async (hardhat) => {
     dim("deploying TreasuryVesting contract for : ", entity, "at address", entityAddress, "with ", vestingAmount, "tokens")
     const recentBlock = await ethers.provider.getBlock()
     dim(`got recent block timestamp: ${recentBlock.timestamp}`)
-    const vestingStartTimeInSeconds = recentBlock.timestamp + 600 
+    const tenMinsInSeconds = 600
+    const vestingStartTimeInSeconds = recentBlock.timestamp + tenMinsInSeconds 
 
     const treasuryResult = await deploy(`TreasuryVesterFor${entity}`, {
       contract: 'TreasuryVester',
