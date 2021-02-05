@@ -1,6 +1,8 @@
 pragma solidity ^0.5.16;
 
 import "./SafeMath.sol";
+import "@nomiclabs/buidler/console.sol";
+
 
 contract Timelock {
     using SafeMath for uint;
@@ -86,7 +88,7 @@ contract Timelock {
         require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
         require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
         require(getBlockTimestamp() <= eta.add(gracePeriod()), "Timelock::executeTransaction: Transaction is stale.");
-
+        console.log("timelock passed requires");
         queuedTransactions[txHash] = false;
 
         bytes memory callData;
@@ -96,7 +98,7 @@ contract Timelock {
         } else {
             callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
         }
-
+        console.log("timelock calling function");
         // solium-disable-next-line security/no-call-value
         (bool success, bytes memory returnData) = target.call.value(value)(callData);
         require(success, "Timelock::executeTransaction: Transaction execution reverted.");
