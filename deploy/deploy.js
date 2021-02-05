@@ -36,6 +36,7 @@ module.exports = async (hardhat) => {
   const twoYearsInSeconds = 63072000
   const vestingStartTimeInSeconds = parseInt(new Date().getTime() / 1000)
   const twoYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + twoYearsInSeconds
+  const twoDaysInSeconds = 172800
   
   // deploy Pool token
   dim(`deploying POOL token`)
@@ -67,12 +68,12 @@ module.exports = async (hardhat) => {
 
   // deploy Timelock
   dim(`deploying Timelock`)
-  const timelockContract = isTestNet? "Timelock" : "Nolock"
+  const timelockContract = isTestNet? "Nolock" : "Timelock"
   const timelockResult = await deploy('Timelock', {
     timelockContract,
     args: [
       governorResult.address,
-      isTestNet ? 172800 : 1 // 2 days for mainnet
+      isTestNet ? twoDaysInSeconds : 1 // 2 days for mainnet
     ],
     from: deployer,
     skipIfAlreadyDeployed: true
@@ -108,7 +109,8 @@ module.exports = async (hardhat) => {
     dim("deploying TreasuryVesting contract for : ", entity, "at address", entityAddress, "with ", vestingAmount, "tokens")
     const recentBlock = await ethers.provider.getBlock()
     dim(`got recent block timestamp: ${recentBlock.timestamp}`)
-    const vestingStartTimeInSeconds = recentBlock.timestamp + 600 
+    const tenMinsInSeconds = 600
+    const vestingStartTimeInSeconds = recentBlock.timestamp + tenMinsInSeconds 
 
     const treasuryResult = await deploy(`TreasuryVesterFor${entity}`, {
       contract: 'TreasuryVester',
