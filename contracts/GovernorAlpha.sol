@@ -204,8 +204,9 @@ contract GovernorAlpha {
         require(state(proposalId) == ProposalState.Queued, "GovernorAlpha::execute: proposal can only be executed if it is queued");
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
-        console.log("governanceAlpha calling timelock");
+        
         for (uint i = 0; i < proposal.targets.length; i++) {
+            console.log("governanceAlpha calling timelock.executeTransaction @", address(timelock));
             timelock.executeTransaction.value(proposal.values[i])(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
         }
         emit ProposalExecuted(proposalId);
