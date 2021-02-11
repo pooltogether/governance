@@ -1,6 +1,6 @@
 pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
-import "@nomiclabs/buidler/console.sol";
+import "hardhat/console.sol";
 
 
 
