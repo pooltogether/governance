@@ -9,19 +9,16 @@ function green() {
   console.log(chalk.green.call(chalk, ...arguments))
 }
 
-const employeeLiAddress = require("../deployments/fork/TreasuryVesterForEmployeeLi.json").address
-const employeeBAddress = require("../deployments/fork/TreasuryVesterForEmployeeB.json").address
-const poolAddress = require("../deployments/fork/Pool.json").address
-const { ethers, deployments } = hardhat
+const { ethers } = hardhat
 const { increaseTime } = require('./helpers/increaseTime')
 
 async function run() {
     
     const gnosisSafe = await ethers.provider.getUncheckedSigner('0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f')
-
-    const poolToken = await ethers.getContractAt("Pool", poolAddress, gnosisSafe)
+    const poolToken = await ethers.getContract("Pool")
   
-
+    const employeeLiAddress = (await ethers.getContract("TreasuryVesterForEmployeeLi")).address
+    const employeeBAddress = (await ethers.getContract("TreasuryVesterForEmployeeB")).address
 
     // delegate to Lilly
     const delegationToLiliTx = await poolToken.delegate(employeeLiAddress)
@@ -39,22 +36,21 @@ async function run() {
     green(`Delegated from ${delegateToSelfResultEvents[0].args.fromDelegate} to ${delegateToSelfResultEvents[0].args.toDelegate}`)
 
 
-    // delegateBySig TODO
-
-    console.log("moving forwards 1 year")
+    dim("moving forwards 1 year")
     await increaseTime(365 * 24 * 3600) // go 1 year forwards
+    
     //claim from employeeB's treasuryVesting 
     const employeeBTreasury = await ethers.getContractAt("TreasuryVester", employeeBAddress, gnosisSafe)
     await employeeBTreasury.claim() // transfers half of total to emplyeB aaddress
 
     dim(`delegating to self for employeeB'`)
     const employeeBAccount = await ethers.provider.getUncheckedSigner('0xa38445311cCd04a54183CDd347E793F4D548Df3F') // employeeBcontrolledaddress
-    const employeeBPoolToken = await ethers.getContractAt("Pool", poolAddress, employeeBAccount)
+    const employeeBPoolToken = await ethers.getContract("Pool", employeeBAccount)
     
     const empoloyeeBDelegateToGnosisSafeTx = await employeeBPoolToken.delegate("0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f") // deletgate to gnosis safe
-    const eGnosisSafeelegateToGnosisSafeReceipt = await ethers.provider.getTransactionReceipt(empoloyeeBDelegateToGnosisSafeTx.hash)
-    const employeeBdelegateToGnosisSafeEvents = eGnosisSafeelegateToGnosisSafeReceipt.logs.map(log => { try { return poolToken.interface.parseLog(log) } catch (e) { return null } })
-    green(`Delegated from ${employeeBdelegateToGnosisSafeEvents[0].args.fromDelegate} to ${employeeBdelegateToGnosisSafeEvents[0].args.toDelegate}`)
+    const gnosisSafeDelegateToGnosisSafeReceipt = await ethers.provider.getTransactionReceipt(empoloyeeBDelegateToGnosisSafeTx.hash)
+    const employeeBDelegateToGnosisSafeEvents = gnosisSafeDelegateToGnosisSafeReceipt.logs.map(log => { try { return poolToken.interface.parseLog(log) } catch (e) { return null } })
+    green(`Delegated from ${employeeBDelegateToGnosisSafeEvents[0].args.fromDelegate} to ${employeeBDelegateToGnosisSafeEvents[0].args.toDelegate}`)
 
 
 }

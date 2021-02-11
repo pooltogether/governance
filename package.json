@@ -12,7 +12,8 @@
     "deploy": "hardhat deploy --network",
     "verify": "hardhat etherscan-verify --license MIT --solc-input --network",
     "clean": "rm -rf artifacts cache",
-    "fork-run": "hardhat run --network localhost"
+    "fork-run": "hardhat run --network fork",
+    "test": "yarn fork-run ./test/disbursePoolTokens.js && yarn fork-run ./test/delegate.js && yarn fork-run ./test/createProposal.js"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",

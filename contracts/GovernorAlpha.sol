@@ -187,6 +187,7 @@ contract GovernorAlpha {
         require(state(proposalId) == ProposalState.Succeeded, "GovernorAlpha::queue: proposal can only be queued if it is succeeded");
         Proposal storage proposal = proposals[proposalId];
         uint eta = add256(block.timestamp, timelock.delay());
+        console.log("setting eta as ", eta);
         for (uint i = 0; i < proposal.targets.length; i++) {
             _queueOrRevert(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
         }
@@ -200,13 +201,10 @@ contract GovernorAlpha {
     }
 
     function execute(uint proposalId) public payable {
-        console.log("called execute");
         require(state(proposalId) == ProposalState.Queued, "GovernorAlpha::execute: proposal can only be executed if it is queued");
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
-        
         for (uint i = 0; i < proposal.targets.length; i++) {
-            console.log("governanceAlpha calling timelock.executeTransaction @", address(timelock));
             timelock.executeTransaction.value(proposal.values[i])(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
         }
         emit ProposalExecuted(proposalId);

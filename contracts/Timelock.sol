@@ -82,17 +82,11 @@ contract Timelock {
     }
 
     function executeTransaction(address target, uint value, string memory signature, bytes memory data, uint eta) public payable returns (bytes memory) {
-        console.log("Timelock: execute Tx called");
         require(msg.sender == admin, "Timelock::executeTransaction: Call must come from admin.");
-        console.log("Timelock: execute Tx called 2");
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
-        console.log("Timelock: execute Tx called 3");
         require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
-        console.log("Timelock: execute Tx called 4");
         require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
-        console.log("Timelock: execute Tx called 5");
         require(getBlockTimestamp() <= eta.add(gracePeriod()), "Timelock::executeTransaction: Transaction is stale.");
-        console.log("timelock passed requires");
         queuedTransactions[txHash] = false;
 
         bytes memory callData;

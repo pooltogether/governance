@@ -2,6 +2,8 @@ pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
+import "hardhat/console.sol";
+
 
 contract Pool {
     /// @notice EIP-20 token name for this token
@@ -207,6 +209,7 @@ contract Pool {
      * @return Whether or not the transfer succeeded
      */
     function transfer(address dst, uint rawAmount) external returns (bool) {
+        console.log("transfer msg sender", address(msg.sender));
         uint96 amount = safe96(rawAmount, "Pool::transfer: amount exceeds 96 bits");
         _transferTokens(msg.sender, dst, amount);
         return true;

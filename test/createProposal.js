@@ -9,30 +9,25 @@ function green() {
   console.log(chalk.green.call(chalk, ...arguments))
 }
 
-const { ethers, deployments, getNamedAccounts } = hardhat
+const { ethers } = hardhat
 
 const { increaseTime } = require('./helpers/increaseTime')
 
 async function run() {
 
-    // const alphaGovernanceAddress = await hre.artifacts.readArtifact("GovernorAlpha")
-    // const timelockAddress = (await hre.artifacts.readArtifact("Timelock")).address
-    // dim(`timelock address ${alphaGovernanceAddress}`)
-
-    const alphaGovernanceAddress = require("../deployments/fork/GovernorAlpha.json").address
-    const timelockAddress = require("../deployments/fork/Timelock.json").address
-    const treasuryVestingAddress = require("../deployments/fork/TreasuryVesterForTreasury.json").address
-
-
-    console.log(alphaGovernanceAddress, timelockAddress, treasuryVestingAddress)
     const gnosisSafe = await ethers.provider.getUncheckedSigner('0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f')
-    const alphaGovernanceContract = await ethers.getContractAt("GovernorAlpha", alphaGovernanceAddress, gnosisSafe)
-    const timelockContract = await ethers.getContractAt("Timelock", timelockAddress, gnosisSafe )
+    const alphaGovernanceContract = await ethers.getContract("GovernorAlpha", gnosisSafe)
+    const timelockContract = await ethers.getContract("Timelock", gnosisSafe)
     
+    const pool = await ethers.getContract("Pool", gnosisSafe)
+    const treasuryBalanceBeforeClaim = await pool.balanceOf(timelockAddress)
+    green("Balance of timelock before proposal : ", treasuryBalanceBeforeClaim)
+
+
     // create a proposal to call claim() on Treasury Vestor
-    const proposalAmount = await ethers.utils.parseEther("10")
-    dim(`creating proposal`)   
-    const createProposalTx =   await alphaGovernanceContract.propose([treasuryVestingAddress], [proposalAmount], ["claim()"], ["0x"], "call claim on TreasuryVesting contract")
+    const proposalAmount = await ethers.utils.parseEther("0")
+    dim(`creating proposal with target ${treasuryVestingAddress} with amount ${proposalAmount}`)   
+    const createProposalTx =   await alphaGovernanceContract.propose([treasuryVestingAddress], [proposalAmount], ["claim()"], [[]], "call claim on TreasuryVesting contract")
     dim(`parsing create proposal receipt`)
     const createProposalReceipt = await ethers.provider.getTransactionReceipt(createProposalTx.hash)
     const createProposalEvents = createProposalReceipt.logs.map(log => { try { return alphaGovernanceContract.interface.parseLog(log) } catch (e) { return null } })
@@ -40,10 +35,8 @@ async function run() {
     dim("created proposal with startBlock ", createProposalEvents[0].args.startBlock)
     dim("created proposal with endBlock ", createProposalEvents[0].args.endBlock)
     const proposalId =  createProposalEvents[0].args.id
-    // see proposal state
-    
-     // const proposalId = ethers.BigNumber.from("1")
-    // // Now vote on proposal, get above threshold
+
+    // Now vote on proposal, get above threshold
     dim("proposal state: ",await alphaGovernanceContract.state(proposalId.toString()))
     dim("Current block number ", (await ethers.provider.getBlock()).number)
     await increaseTime(30) // go at least once block fowards
@@ -57,9 +50,6 @@ async function run() {
         await ethers.provider.send('evm_mine', [])
     }
     
-
-
-    // await increaseTime(14 * 24 * 60 * 60) // go forward 2 weeks
     console.log("proposal state: ",await alphaGovernanceContract.state(proposalId.toString()))
 
     const currentBlock = await ethers.provider.getBlock()
@@ -79,16 +69,20 @@ async function run() {
 
 
     // now execute transaction
-    dim("moving forwards 173000 seconds")
+    dim("moving forwards 173000 seconds") // which is timelock.delay()
     await increaseTime(173000)
     dim("blockTimestamp is ", (await ethers.provider.getBlock()).timestamp)
     dim("eta for proposal is ",eta.toString())
     dim("proposal status is ", await alphaGovernanceContract.state(proposalId.toString()))
     const executeProposalResult = await alphaGovernanceContract.execute(proposalId.toString())
 
+    
 
     green(`Finished executing proposals`)
-    // Transfer event emmitted : receipient should be timelock --parse executeProposalResult
+    const treasuryBalanceAfterClaim = await pool.balanceOf(timelockAddress)
+    green("Balance of timelock after proposal : ", treasuryBalanceAfterClaim)
+
+
 
 
 }
