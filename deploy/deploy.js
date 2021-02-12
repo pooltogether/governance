@@ -79,7 +79,7 @@ module.exports = async (hardhat) => {
   const governor = await ethers.getContractAt('GovernorAlpha', governorResult.address, deployerSigner)
   if(await governor.timelock() != timelockResult.address){
     await governor.setTimelock(timelockResult.address)
-    green(`Timelock set to ${timelockResult.address}`)
+    green(`Governor Timelock set to ${timelockResult.address}`)
   }
 
   

@@ -3,6 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
 
+
 contract Pool {
     /// @notice EIP-20 token name for this token
     string public constant name = "PoolTogether";

@@ -1,6 +1,7 @@
 pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
 
+
 contract GovernorAlpha {
     /// @notice The name of this contract
     string public constant name = "PoolTogether Governor Alpha";
