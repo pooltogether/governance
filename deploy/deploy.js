@@ -18,13 +18,6 @@ module.exports = async (hardhat) => {
   const deployerSigner = namedSigners.deployer
 
   const allReceivingEntities = {
-    EmployeeA: "10000",
-    EmployeeB: "400000",
-    EmployeeC: "400000",
-    EmployeeD: "10000",
-    EmployeeL: "400000",
-    EmployeeLi:"10000",
-    EmployeeJ: "4200",
     Treasury: "6000000"
   }
 
@@ -104,7 +97,7 @@ module.exports = async (hardhat) => {
     let entityAddress = namedAccounts[entity]
     if(entity == 'Treasury'){
       entityAddress = timelockResult.address
-      console.log("setting entity address to ", entityAddress)
+      dim("setting entity address to ", entityAddress)
     }
     const vestingAmount = ethers.utils.parseEther(allReceivingEntities[entity])
     dim("deploying TreasuryVesting contract for : ", entity, "at address", entityAddress, "with ", vestingAmount, "tokens")
