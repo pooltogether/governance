@@ -1,8 +1,6 @@
 pragma solidity ^0.5.16;
 
 import "./SafeMath.sol";
-import "hardhat/console.sol";
-
 
 contract Timelock {
     using SafeMath for uint;
@@ -96,7 +94,6 @@ contract Timelock {
         } else {
             callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
         }
-        console.log("timelock calling function");
         // solium-disable-next-line security/no-call-value
         (bool success, bytes memory returnData) = target.call.value(value)(callData);
         require(success, "Timelock::executeTransaction: Transaction execution reverted.");

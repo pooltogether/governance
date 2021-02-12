@@ -1,7 +1,5 @@
 pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
-import "hardhat/console.sol";
-
 
 
 contract GovernorAlpha {
@@ -21,7 +19,7 @@ contract GovernorAlpha {
     function votingDelay() public pure returns (uint) { return 1; } // 1 block
 
     /// @notice The duration of voting on a proposal, in blocks
-    function votingPeriod() public pure returns (uint) { return 20; } // ~7 days in blocks (assuming 15s blocks)
+    function votingPeriod() public pure returns (uint) { return 40_320; } // ~7 days in blocks (assuming 15s blocks)
 
     /// @notice The address of the Pool Protocol Timelock
     TimelockInterface public timelock;
@@ -183,11 +181,9 @@ contract GovernorAlpha {
     }
 
     function queue(uint proposalId) public {
-        console.log("called queue");
         require(state(proposalId) == ProposalState.Succeeded, "GovernorAlpha::queue: proposal can only be queued if it is succeeded");
         Proposal storage proposal = proposals[proposalId];
         uint eta = add256(block.timestamp, timelock.delay());
-        console.log("setting eta as ", eta);
         for (uint i = 0; i < proposal.targets.length; i++) {
             _queueOrRevert(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
         }
@@ -257,7 +253,6 @@ contract GovernorAlpha {
     }
 
     function castVote(uint proposalId, bool support) public {
-        console.log("casting votes");
         return _castVote(msg.sender, proposalId, support);
     }
 
