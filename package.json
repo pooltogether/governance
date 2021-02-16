@@ -1,19 +1,18 @@
 {
   "name": "@pooltogether/governance",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "description": "🏛 Governance contracts for the PoolTogether protocol",
   "author": "Brendan Asselstine",
   "license": "MIT",
-  "files": [
-    "build"
-  ],
   "scripts": {
     "compile": "hardhat compile",
     "deploy": "hardhat deploy --network",
     "verify": "hardhat etherscan-verify --license MIT --solc-input --network",
-    "clean": "rm -rf artifacts cache",
+    "clean": "rm -rf artifacts cache build",
     "fork-run": "hardhat run --network fork",
-    "test": "yarn fork-run ./test/disbursePoolTokens.js && yarn fork-run ./test/delegate.js && yarn fork-run ./test/createProposal.js"
+    "test": "yarn fork-run ./test/disbursePoolTokens.js && yarn fork-run ./test/delegate.js && yarn fork-run ./test/createProposal.js",
+    "prepack": "yarn clean && hardhat compile",
+    "postpublish": "PACKAGE_VERSION=$(./scripts/package-version.sh) && git tag -ae v$PACKAGE_VERSION && git push --tags"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
@@ -22,11 +21,23 @@
     "ethereum-waffle": "^3.0.0",
     "ethers": "^5.0.0",
     "hardhat": "^2.0.7",
+    "hardhat-abi-exporter": "^2.0.8",
     "hardhat-deploy": "^0.7.0-beta.39",
     "hardhat-deploy-ethers": "^0.3.0-beta.7"
   },
   "dependencies": {
     "@nomiclabs/buidler": "^1.4.8",
     "chai": "^4.2.0"
-  }
+  },
+  "files": [
+    "LICENSE",
+    "abis/**",
+    "build/**",
+    "artifacts/**",
+    ".build-openzeppelin/**",
+    "contracts/**",
+    "deployments/**",
+    "deploy/**",
+    "js/**"
+  ]
 }

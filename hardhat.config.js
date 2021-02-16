@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('hardhat-deploy')
 require('hardhat-deploy-ethers')
+require('hardhat-abi-exporter')
 
 const networks = require('./hardhat.networks')
 
@@ -34,5 +35,10 @@ module.exports = {
     }
     
   },
-  networks
+  networks,
+  abiExporter: {
+    path: './abis',
+    clear: true,
+    flat: true
+  }
 };
