@@ -26,9 +26,10 @@ module.exports = async (hardhat) => {
   dim(`Is TestNet? ${isTestNet}`)
 
   // constants 
-  const twoYearsInSeconds = 63072000
+  const oneYearInSeconds = 31536000
   const vestingStartTimeInSeconds = parseInt(new Date().getTime() / 1000)
-  const twoYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + twoYearsInSeconds
+  const twoYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + (2 * oneYearInSeconds)
+  const fourYearsAfterDeployStartInSeconds = vestingStartTimeInSeconds + (4 * oneYearInSeconds)
   const twoDaysInSeconds = 172810
   
   // deploy Pool token
@@ -37,7 +38,7 @@ module.exports = async (hardhat) => {
     args: [
       MultiSig, 
       deployer, // minter
-      twoYearsAfterDeployStartInSeconds
+      fourYearsAfterDeployStartInSeconds
     ],
     from: deployer,
     skipIfAlreadyDeployed: true
