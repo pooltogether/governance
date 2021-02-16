@@ -13,8 +13,10 @@ const { ethers } = hardhat
 const { increaseTime } = require('./helpers/increaseTime')
 
 async function run() {
+    const { getNamedAccounts } = hardhat
+    const { MultiSig } = await getNamedAccounts()
     
-    const gnosisSafe = await ethers.provider.getUncheckedSigner('0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f')
+    const gnosisSafe = await ethers.provider.getUncheckedSigner(MultiSig)
     const poolToken = await ethers.getContract("Pool")
   
     const employeeLiAddress = (await ethers.getContract("TreasuryVesterForEmployeeLi")).address
@@ -28,8 +30,8 @@ async function run() {
     green(`Delegated from ${delegateToLiliEvents[0].args.fromDelegate} to ${delegateToLiliEvents[0].args.toDelegate}`)
 
     // delegate to oneself
-    dim(`delegating to self '0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f'`)
-    const delegationSelfTx = await poolToken.delegate('0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f')
+    dim(`delegating to self MultiSig`)
+    const delegationSelfTx = await poolToken.delegate(MultiSig)
     const delegateToSelfReceipt = await ethers.provider.getTransactionReceipt(delegationSelfTx.hash)
     const delegateToSelfResultEvents = delegateToSelfReceipt.logs.map(log => { try { return poolToken.interface.parseLog(log) } catch (e) { return null } })
     
@@ -47,7 +49,7 @@ async function run() {
     const employeeBAccount = await ethers.provider.getUncheckedSigner('0xa38445311cCd04a54183CDd347E793F4D548Df3F') // employeeBcontrolledaddress
     const employeeBPoolToken = await ethers.getContract("Pool", employeeBAccount)
     
-    const empoloyeeBDelegateToGnosisSafeTx = await employeeBPoolToken.delegate("0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f") // deletgate to gnosis safe
+    const empoloyeeBDelegateToGnosisSafeTx = await employeeBPoolToken.delegate(MultiSig) // deletgate to gnosis safe
     const gnosisSafeDelegateToGnosisSafeReceipt = await ethers.provider.getTransactionReceipt(empoloyeeBDelegateToGnosisSafeTx.hash)
     const employeeBDelegateToGnosisSafeEvents = gnosisSafeDelegateToGnosisSafeReceipt.logs.map(log => { try { return poolToken.interface.parseLog(log) } catch (e) { return null } })
     green(`Delegated from ${employeeBDelegateToGnosisSafeEvents[0].args.fromDelegate} to ${employeeBDelegateToGnosisSafeEvents[0].args.toDelegate}`)

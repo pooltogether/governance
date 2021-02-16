@@ -14,8 +14,10 @@ const { ethers } = hardhat
 const { increaseTime } = require('./helpers/increaseTime')
 
 async function run() {
+    const { getNamedAccounts } = hardhat
+    const { MultiSig } = await getNamedAccounts()
 
-    const gnosisSafe = await ethers.provider.getUncheckedSigner('0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f')
+    const gnosisSafe = await ethers.provider.getUncheckedSigner(MultiSig)
     const alphaGovernanceContract = await ethers.getContract("GovernorAlpha", gnosisSafe)
     const timelockContract = await ethers.getContract("Timelock", gnosisSafe)
     

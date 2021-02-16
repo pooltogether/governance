@@ -16,10 +16,12 @@ const merkleDistributor = require(merkleDistributorPath).address
 
 
 async function run() {
+  const { getNamedAccounts } = hardhat
+  const { MultiSig } = await getNamedAccounts()
 
-  const gnosisSafe = await ethers.provider.getUncheckedSigner('0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f')
+  const gnosisSafe = await ethers.provider.getUncheckedSigner(MultiSig)
   const poolToken = await ethers.getContract('Pool', gnosisSafe)
-  dim(`Pool balance of gnosisSafe before disbursal ${await poolToken.balanceOf("0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f")}`)
+  dim(`Pool balance of gnosisSafe before disbursal ${await poolToken.balanceOf(MultiSig)}`)
 
   const treasuryVesting = (await ethers.getContract("TreasuryVesterForTreasury")).address
 
@@ -30,7 +32,7 @@ async function run() {
   dim(`Disbursing to merkle distributor to merkle distributor at ${merkleDistributor}`)
   await poolToken.transfer(merkleDistributor, ethers.utils.parseEther('1500000'))
 
-  dim(`Pool balance of gnosisSafe after disbursal ${await poolToken.balanceOf("0x029Aa20Dcc15c022b1b61D420aaCf7f179A9C73f")}`)  
+  dim(`Pool balance of gnosisSafe after disbursal ${await poolToken.balanceOf(MultiSig)}`)  
   green("done")
 }
 
