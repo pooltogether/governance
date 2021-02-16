@@ -18,7 +18,7 @@ module.exports = async (hardhat) => {
   const deployerSigner = namedSigners.deployer
 
   const allReceivingEntities = {
-    Treasury: "6004000"
+    Treasury: "5754000"
   }
 
   dim(`Deployer is ${deployer}`)
