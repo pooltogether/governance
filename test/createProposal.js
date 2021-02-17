@@ -20,7 +20,10 @@ async function run() {
     const gnosisSafe = await ethers.provider.getUncheckedSigner(MultiSig)
     const alphaGovernanceContract = await ethers.getContract("GovernorAlpha", gnosisSafe)
     const timelockContract = await ethers.getContract("Timelock", gnosisSafe)
-    
+    const timelockAddress = timelockContract.address
+    const treasuryVestingContract = await ethers.getContract("TreasuryVesterForTreasury")
+    const treasuryVestingAddress = treasuryVestingContract.address
+
     const pool = await ethers.getContract("Pool", gnosisSafe)
     const treasuryBalanceBeforeClaim = await pool.balanceOf(timelockAddress)
     green("Balance of timelock before proposal : ", treasuryBalanceBeforeClaim)
@@ -46,11 +49,16 @@ async function run() {
     dim("proposal state: ",await alphaGovernanceContract.state(proposalId.toString()))
     dim("casting vote for proposal")
     await alphaGovernanceContract.castVote(proposalId, true)
-    dim("fast forwarding 21 blocks")
+    const votingPeriod = await alphaGovernanceContract.votingPeriod()
+    dim(`fast forwarding ${votingPeriod.toNumber()}} blocks`)
 
-    for(let counter=0; counter < 21;  counter++){
-        await ethers.provider.send('evm_mine', [])
+    // await (async function r(){
+    for(let counter=0; counter < votingPeriod.toNumber();  counter++){
+      await ethers.provider.send('evm_mine', [])
     }
+    // })
+    // r()
+
     
     console.log("proposal state: ",await alphaGovernanceContract.state(proposalId.toString()))
 
