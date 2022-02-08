@@ -2,6 +2,7 @@ require("@nomiclabs/hardhat-waffle");
 require('hardhat-deploy')
 require('hardhat-deploy-ethers')
 require('hardhat-abi-exporter')
+require('@pooltogether/hardhat-deploy-markdown-export')
 
 const networks = require('./hardhat.networks')
 

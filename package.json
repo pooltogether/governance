@@ -11,6 +11,7 @@
     "clean": "rm -rf artifacts cache build",
     "fork-run": "hardhat run --network fork",
     "test": "yarn fork-run ./test/disbursePoolTokens.js && yarn fork-run ./test/delegate.js && yarn fork-run ./test/createProposal.js",
+    "docs": "hardhat deploy-markdown-export --name 'Governance' --npm-package-name @pooltogether/governance --github-base-url 'https://github.com/pooltogether/governance/tree/master' --output-filepath governance.md",
     "prepack": "yarn clean && hardhat compile",
     "postpublish": "PACKAGE_VERSION=$(./scripts/package-version.sh) && git tag -ae v$PACKAGE_VERSION && git push --tags"
   },
@@ -23,7 +24,10 @@
     "hardhat": "^2.0.7",
     "hardhat-abi-exporter": "^2.0.8",
     "hardhat-deploy": "^0.7.0-beta.39",
-    "hardhat-deploy-ethers": "^0.3.0-beta.7"
+    "hardhat-deploy-ethers": "^0.3.0-beta.7",
+    "@pooltogether/hardhat-deploy-markdown-export": "^0.1.1",
+    "find": "^0.3.0",
+    "glob": "^7.1.7"
   },
   "dependencies": {
     "@nomiclabs/buidler": "^1.4.8",
